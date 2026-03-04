@@ -1,0 +1,18 @@
+# Environment variables
+.env
+*.env
+
+# API Keys and credentials
+*.credentials
+credentials/
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,232 @@
+{
+  "name": "Shipping Label Generator v2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2b1e156d-7f86-4fcc-aabf-9e5144d65069",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10OykIP0UE4qrVUFENVJnHfHBF9alKQ7pWiNW3zA0FbA",
+          "mode": "list",
+          "cachedResultName": "Shipping Labels Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10OykIP0UE4qrVUFENVJnHfHBF9alKQ7pWiNW3zA0FbA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10OykIP0UE4qrVUFENVJnHfHBF9alKQ7pWiNW3zA0FbA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1cd72663-38a0-4505-b52a-b308b2a015a6",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Convert this shipping data into an HTML label. Return ONLY the raw HTML div with data filled in. No markdown, no backticks.\n\n<div style=\"border:2px solid #333;border-radius:6px;padding:24px;font-family:Arial,sans-serif;height:100%\"><div style=\"font-size:11px;font-weight:bold;color:#666;letter-spacing:1px;border-bottom:1px solid #ccc;padding-bottom:10px;margin-bottom:15px\">SHIP TO</div><div style=\"font-size:20px;font-weight:900;margin-bottom:12px\">NAME</div><div style=\"font-size:14px;color:#333;margin-bottom:15px\">Phone: PHONE</div><div style=\"font-size:15px;line-height:1.5;margin-bottom:5px\">ADDRESS1</div><div style=\"font-size:15px;line-height:1.5;margin-bottom:20px\">ADDRESS2</div><div style=\"font-size:16px;font-weight:bold;background:#eee;display:inline-block;padding:8px 15px;border:1px solid #ccc\">Pincode: PINCODE</div></div>",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "26c8cac4-3cb1-41ea-9b00-b37f554bac65",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.0-flash-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        288,
+        208
+      ],
+      "id": "2e3bd564-e54a-4f13-a5e7-43a3134d0adc",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sheetItems = $('Get row(s) in sheet').all();\nconst allLabels = sheetItems.map(i => {\n  const d = i.json;\n  return '<div style=\"border:2px solid #333;border-radius:6px;padding:14px;font-family:Arial,sans-serif;overflow:hidden\"><div style=\"font-size:13px;font-weight:bold;color:#666;letter-spacing:1px;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:8px\">SHIP TO</div><div style=\"font-size:22px;font-weight:900;color:#000;margin-bottom:12px\">' + d['Name'] + '</div><div style=\"font-size:15px;color:#333;margin-bottom:8px\">Phone: ' + d['Phone Number'] + '</div><div style=\"font-size:16px;color:#222;line-height:1.4;margin-bottom:3px\">' + d['Address 1'] + '</div><div style=\"font-size:16px;color:#222;line-height:1.4;margin-bottom:10px\">' + d['Address 2'] + '</div><div style=\"font-size:17px;font-weight:bold;color:#000;background:#eee;display:inline-block;padding:5px 12px;border:1px solid #ccc\">Pincode: ' + d['Pincode'] + '</div></div>';\n});\nconst pages = [];\nfor (let i = 0; i < allLabels.length; i += 8) { pages.push(allLabels.slice(i, i + 8)); }\nlet html = '<!DOCTYPE html><html><head><style>@page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif}.page{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr);gap:8mm;page-break-after:always;padding:8mm;height:277mm}.page:last-child{page-break-after:avoid}</style></head><body>';\nfor (const page of pages) { html += '<div class=\"page\">' + page.join('') + '</div>'; }\nhtml += '</body></html>';\nreturn [{json: {html: html}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "db6afbb0-c498-4d22-b634-64078eef1f86",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.html2pdf.app/v1/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"apiKey\":\"YOUR_HTML2PDF_API_KEY\",\"html\":{{JSON.stringify($json.html)}},\"format\":\"A4\"}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        976,
+        0
+      ],
+      "id": "0ff94ced-e82b-4b9c-9c36-64fb72612be9",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "krushnamane2004@gmail.com",
+        "subject": "Shipping Labels",
+        "message": "Please find labels attached.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "25669842-7b3d-4adf-bcdd-1daace3cc51e",
+      "name": "Send a message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2330548f-c368-481c-944e-7a8ad3c9cffa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "SxzFW0dYdvUNpxSq",
+  "tags": []
+}
